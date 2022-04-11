@@ -43,35 +43,50 @@ PyCaret’s Anomaly Detection Module is an unsupervised machine learning module 
 部分代码如下：基本思路为从总数据集中导出一个样本，针对这个样本对数据进行训练并得到不同检测算法的模型，将模型人工再此修正后重新训练模型，并把模型用于总数据集得到最终结果。
 
 ```python
-from pycaret.anomaly import *
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-import numpy as np
+## 训练模型
+## 载入的训练数据需要以 数字_trainData 的形式命名
+def AnomalyDetection():
+   for i in range(200):
+        ##———————————————————导入数据——————————————————————##
+        all_datasets = get_data(str(i)+'_trainData')
 
-from pycaret.datasets import get_data
-all_datasets = get_data("training_set")
-data = all_datasets.sample(frac=0.98, random_state=1000)
-data_unseen = all_datasets.drop(data.index)
+        data = all_datasets.sample(frac=0.97, random_state=810)
+        data_unseen = all_datasets.drop(data.index)
+        ##———————————————————处理数据——————————————————————##
+        data.reset_index(drop=True, inplace=True)
+        data_unseen.reset_index(drop=True, inplace=True)
+        exp_ano101 = setup(all_datasets, normalize = True, 
+                        ignore_features = ['商品ID','店铺ID','三级类目名','收藏数','评论数','收藏评论综合2','收藏评论综合','店铺评分'],
+                        session_id = 279)
+        ##———————————————————建立模型——————————————————————##
+        iforest = create_model('iforest')   
+        print(iforest)
+        ##———————————————————开始预测——————————————————————##
+        results = assign_model(iforest)
+        results.head()
+        data_predictions = predict_model(iforest, data = all_datasets)
+        data_predictions.head()
+        ##———————————————————保存模型——————————————————————##
+        save_model(iforest,str(i)+'_Iforest')
+        ##———————————————————输出处理结果到csv文件——————————————————————##
+        data_predictions.to_csv(str(i)+'_Iforest'+".csv",index=False,sep=',')
 
-data.reset_index(drop=True, inplace=True)
-data_unseen.reset_index(drop=True, inplace=True)
-
-print('Data for Modeling: ' + str(data.shape))
-print('Unseen Data For Predictions: ' + str(data_unseen.shape))
-
-exp_ano101 = setup(all_datasets, normalize = True, 
-                   ignore_features = ['商品ID','店铺ID','三级类目名','收藏数','评论数','收藏评论综合2','收藏评论综合','店铺评分'],
-                   session_id = 279)
-                   
-lof = create_model('lof')
-print(lof)、
-lof = create_model('lof')
-print(svm)
-
-save_model(iforest,'Iforest')
-
-data_predictions.to_csv("iforest3.csv",index=False,sep=',')
+## 载入模型并处理数据
+## 载入的预测数据需要以 数字_realData 的形式命名
+def LoadModel(i):
+    all_datasets = get_data(str(i)+'_realData')
+    save_model = load_model(str(i)+'_Iforest')
+    new_predictions = predict_model(save_model, data = all_datasets)
+    ##———————————————————输出处理结果到csv文件——————————————————————##
+    data_predictions.to_csv(str(i)+'_Iforest_Predicted'+".csv",index=False,sep=',')
+ 
+ 
+    
+# 按照三级类目分成200个文件，按照0-199进行编号
+def main():
+    AnomalyDetection() # 训练模型
+    for i in range(200):
+        LoadModel(i)   # 载入模型并处理数据
 ```
 
 得到的模型如下：
